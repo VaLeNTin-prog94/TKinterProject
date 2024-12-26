@@ -30,6 +30,8 @@ class DrawingApp:
         choose_color(): Открывает диалог выбора цвета для выбора цвета пера.
         save_image(): Сохраняет текущее изображение как PNG файл.
         update_brush_size(size): Обновляет размер кисти на основе выбора пользователя.
+        activate_eraser(self):   Активация инструмента "Ластик"
+        deactivate_eraser(self):   Деактивация инструмента "Ластик" и восстановление предыдущего цвета
     """
 
     def __init__(self, root):
@@ -49,12 +51,12 @@ class DrawingApp:
 
         self.canvas = tk.Canvas(root, width=600, height=400, bg='white')
         self.canvas.pack()
-
+        self.last_x, self.last_y = None, None
+        self.pen_color = "black"
+        self.brush_size = 5  # Инициализация brush_size
+        self.previous_color = None  # Переменная для хранения предыдущего цвета
         self.setup_ui()  # Вызывается метод self.setup_ui(), который настраивает элементы управления интерфейса.
 
-        self.last_x, self.last_y = None, None
-        self.pen_color = 'black'
-        self.brush_size = 1  # Установка начального размера кисти
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
@@ -73,7 +75,12 @@ class DrawingApp:
 
         save_button = tk.Button(control_frame, text="Сохранить", command=self.save_image)
         save_button.pack(side=tk.LEFT)
-
+        # Кнопка "Ластик"
+        eraser_button = tk.Button(self.root, text="Ластик", command=self.activate_eraser)
+        eraser_button.pack(side=tk.LEFT)
+        # Кнопка "Восстановить цвет"
+        restore_color_button = tk.Button(self.root, text="Восстановить цвет", command=self.deactivate_eraser)
+        restore_color_button.pack(side=tk.LEFT)
         # Создание выпадающего списка для выбора размера кисти
         sizes = [1, 2, 5, 10]
         self.brush_size_var = tk.IntVar(value=sizes[0])  # Установка начального значения
@@ -92,12 +99,14 @@ class DrawingApp:
         Функция вызывается при движении мыши с нажатой левой кнопкой по холсту. Она рисует линии на холсте Tkinter и параллельно на объекте Image из Pillow:
         :param event: Событие содержит координаты мыши, которые используются для рисования.
         '''
+        # Обработка рисования
         if self.last_x and self.last_y:
             self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
                                     width=self.brush_size, fill=self.pen_color,
                                     capstyle=tk.ROUND, smooth=tk.TRUE)
             self.draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.pen_color,
                            width=self.brush_size)
+
         self.last_x = event.x
         self.last_y = event.y
 
@@ -120,7 +129,11 @@ class DrawingApp:
         '''
         Открывает стандартное диалоговое окно выбора цвета и устанавливает выбранный цвет как текущий для кисти.
         '''
-        self.pen_color = colorchooser.askcolor(color=self.pen_color)[1]
+        # Выбор цвета
+        color = colorchooser.askcolor()[1]
+        if color:
+            self.previous_color = self.pen_color  # Сохраняем предыдущий цвет
+            self.pen_color = color
 
     def save_image(self):
         '''
@@ -133,6 +146,21 @@ class DrawingApp:
                 file_path += '.png'
             self.image.save(file_path)
             messagebox.showinfo("Информация", "Изображение успешно сохранено!")
+
+    def activate_eraser(self):
+        '''
+        Активация инструмента "Ластик"
+        '''
+        self.previous_color = self.pen_color  # Сохраняем текущий цвет
+        self.pen_color = "white"  # Устанавливаем цвет фона
+
+    def deactivate_eraser(self):
+        '''
+        Деактивация инструмента "Ластик" и восстановление предыдущего цвета
+        '''
+        if self.previous_color:
+            self.pen_color = self.previous_color
+            self.previous_color = None  # Сбрасываем сохраненный цвет
 
 
 def main():
