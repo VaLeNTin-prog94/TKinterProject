@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import colorchooser, filedialog, messagebox
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 
 
 class DrawingApp:
@@ -49,14 +49,17 @@ class DrawingApp:
         self.draw = ImageDraw.Draw(
             self.image)  # Инициализируется объект ImageDraw.Draw(self.image), который позволяет рисовать на объекте изображения.
 
-        self.canvas = tk.Canvas(root, width=600, height=400, bg='white')
+        self.canvas = tk.Canvas(root, width=600, height=600, bg='white', cursor="dot")
         self.canvas.pack()
+
         self.last_x, self.last_y = None, None
         self.pen_color = "black"
-        self.brush_size = 5  # Инициализация brush_size
-        self.previous_color = None  # Переменная для хранения предыдущего цвета
-        self.setup_ui()  # Вызывается метод self.setup_ui(), который настраивает элементы управления интерфейса.
+        self.brush_size = 5
+        self.eraser_size = 20  # Размер для ластика
+        self.is_eraser_active = False  # Флаг для режима ластика
+        self.default_cursor = "dot"  # Курсор по умолчанию
 
+        self.setup_ui()
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
@@ -75,24 +78,36 @@ class DrawingApp:
 
         save_button = tk.Button(control_frame, text="Сохранить", command=self.save_image)
         save_button.pack(side=tk.LEFT)
-        # Кнопка "Ластик"
-        eraser_button = tk.Button(self.root, text="Ластик", command=self.activate_eraser)
-        eraser_button.pack(side=tk.LEFT)
-        # Кнопка "Восстановить цвет"
-        restore_color_button = tk.Button(self.root, text="Восстановить цвет", command=self.deactivate_eraser)
-        restore_color_button.pack(side=tk.LEFT)
-        # Создание выпадающего списка для выбора размера кисти
-        sizes = [1, 2, 5, 10]
-        self.brush_size_var = tk.IntVar(value=sizes[0])  # Установка начального значения
+        sizes = [1, 2, 5, 10, 20]  # Доступные размеры кисти
+        self.brush_size_var = tk.IntVar(value=sizes[2])  # Установка начального значения
         brush_size_menu = tk.OptionMenu(control_frame, self.brush_size_var, *sizes, command=self.update_brush_size)
         brush_size_menu.pack(side=tk.LEFT)
+        eraser_button = tk.Button(control_frame, text="Ластик", command=self.activate_eraser)
+        eraser_button.pack(side=tk.LEFT)
+
+        eraser_sizes = [5, 10, 20, 30]  # Доступные размеры ластика
+        self.eraser_size_var = tk.IntVar(value=self.eraser_size)  # Установка начального значения
+        eraser_size_menu = tk.OptionMenu(control_frame, self.eraser_size_var, *eraser_sizes,
+                                         command=self.update_eraser_size)
+        eraser_size_menu.pack(side=tk.LEFT)
+
+        restore_color_button = tk.Button(control_frame, text="Вернуться обратно в курсор",
+                                         command=self.deactivate_eraser)
+        restore_color_button.pack(side=tk.LEFT)
 
     def update_brush_size(self, selected_size):
         '''
          # Обновление размера кисти
         :param selected_size:  Выбранный размер кисти из выпадающего меню.
         '''
-        self.brush_size = int(selected_size)
+        if not self.is_eraser_active:  # Менять размер кисти, только если не активен ластик
+            self.brush_size = int(selected_size)
+    def update_eraser_size(self, selected_size):
+        '''
+        Обновляем размер ластика, когда изменен выбор
+        :param selected_size: Выбранный размер ластика из выпадающего меню.
+        '''
+        self.eraser_size = int(selected_size)  # Обновляем размер ластика, когда изменен выбор
 
     def paint(self, event):
         '''
@@ -101,12 +116,23 @@ class DrawingApp:
         '''
         # Обработка рисования
         if self.last_x and self.last_y:
-            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
-                                    width=self.brush_size, fill=self.pen_color,
-                                    capstyle=tk.ROUND, smooth=tk.TRUE)
-            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.pen_color,
-                           width=self.brush_size)
+            if self.is_eraser_active:
+                # Координаты квадрата для ластика
+                x1 = event.x - self.eraser_size // 2
+                y1 = event.y - self.eraser_size // 2
+                x2 = event.x + self.eraser_size // 2
+                y2 = event.y + self.eraser_size // 2
 
+                # Рисуем "ластик" (белый квадрат)
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill="white", outline="white")
+                self.draw.rectangle([x1, y1, x2, y2], fill="white")  # Также стираем в изображении
+            else:
+                # Рисуем линию
+                self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
+                                        width=self.brush_size, fill=self.pen_color,
+                                        capstyle=tk.ROUND, smooth=tk.TRUE)
+                self.draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.pen_color,
+                               width=self.brush_size)
         self.last_x = event.x
         self.last_y = event.y
 
@@ -151,17 +177,15 @@ class DrawingApp:
         '''
         Активация инструмента "Ластик"
         '''
-        self.previous_color = self.pen_color  # Сохраняем текущий цвет
-        self.pen_color = "white"  # Устанавливаем цвет фона
+        self.is_eraser_active = True
+        self.canvas.config(cursor="circle")  # Изменяем курсор на круг
 
     def deactivate_eraser(self):
         '''
         Деактивация инструмента "Ластик" и восстановление предыдущего цвета
         '''
-        if self.previous_color:
-            self.pen_color = self.previous_color
-            self.previous_color = None  # Сбрасываем сохраненный цвет
-
+        self.is_eraser_active = False
+        self.canvas.config(cursor="dot")  # Сбрасываем курсор на стрелку
 
 def main():
     root = tk.Tk()
