@@ -42,7 +42,7 @@ class DrawingApp:
         self.root = root
         self.root.title("Рисовалка с сохранением в PNG")  # Устанавливается заголовок окна приложения.
 
-        self.image = Image.new("RGB", (600, 400),
+        self.image = Image.new("RGB", (600, 600),
                                "white")  # Создается объект изображения (self.image) с использованием библиотеки Pillow.
         # Это изображение служит виртуальным холстом, на котором происходит рисование. Изначально оно заполнено белым цветом.
 
@@ -53,7 +53,11 @@ class DrawingApp:
         self.canvas.pack()
 
         self.last_x, self.last_y = None, None
-        self.pen_color = "black"
+        self.pen_color = 'black'
+
+        # Связываем событие правой кнопки мыши с методом pick_color
+        self.canvas.bind('<Button-3>', self.pick_color)
+
         self.brush_size = 5
         self.eraser_size = 20  # Размер для ластика
         self.is_eraser_active = False  # Флаг для режима ластика
@@ -102,12 +106,33 @@ class DrawingApp:
         '''
         if not self.is_eraser_active:  # Менять размер кисти, только если не активен ластик
             self.brush_size = int(selected_size)
+
     def update_eraser_size(self, selected_size):
         '''
         Обновляем размер ластика, когда изменен выбор
         :param selected_size: Выбранный размер ластика из выпадающего меню.
         '''
         self.eraser_size = int(selected_size)  # Обновляем размер ластика, когда изменен выбор
+
+    def pick_color(self, event):
+        '''
+        Обрабатывает событие клика правой кнопкой мыши на холсте.
+        Получает координаты клика, извлекает цвет пикселя из изображения и
+        устанавливает его как текущий цвет пера для рисования.
+        :param event: Объект события, содержащий информацию о координатах клика
+        :return: Если клик был выполнен в пределах изображения, цвет пикселя
+    преобразуется в строковый формат HEX и сохраняется в self.pen_color.
+    Также выводит выбранный цвет в консоль.
+        '''
+        # Получаем координаты клика правой кнопкой мыши
+        x, y = event.x, event.y
+
+        # Получаем цвет пикселя по указанным координатам
+        if 0 <= x < self.image.width and 0 <= y < self.image.height:
+            pixel_color = self.image.getpixel((x, y))
+            # Устанавливаем полученный цвет как цвет пера
+            self.pen_color = "#{:02x}{:02x}{:02x}".format(pixel_color[0], pixel_color[1], pixel_color[2])
+            print(f"Выбранный цвет: {self.pen_color}")
 
     def paint(self, event):
         '''
@@ -186,6 +211,7 @@ class DrawingApp:
         '''
         self.is_eraser_active = False
         self.canvas.config(cursor="dot")  # Сбрасываем курсор на стрелку
+
 
 def main():
     root = tk.Tk()
