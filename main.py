@@ -67,6 +67,10 @@ class DrawingApp:
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
+        # Привязка горячих клавиш
+        self.root.bind('<Control-s>', self.save_image)
+        self.root.bind('<Control-c>', self.choose_color)
+
     def setup_ui(self):
         '''
         Этот метод отвечает за создание и расположение виджетов управления:
@@ -176,7 +180,7 @@ class DrawingApp:
         self.image = Image.new("RGB", (600, 400), "white")
         self.draw = ImageDraw.Draw(self.image)
 
-    def choose_color(self):
+    def choose_color(self, event):
         '''
         Открывает стандартное диалоговое окно выбора цвета и устанавливает выбранный цвет как текущий для кисти.
         '''
@@ -186,7 +190,7 @@ class DrawingApp:
             self.previous_color = self.pen_color  # Сохраняем предыдущий цвет
             self.pen_color = color
 
-    def save_image(self):
+    def save_image(self, event):
         '''
         Позволяет пользователю сохранить изображение, используя стандартное диалоговое окно для сохранения файла.
         Поддерживает только формат PNG. В случае успешного сохранения выводится сообщение об успешном сохранении.
