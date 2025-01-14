@@ -54,7 +54,9 @@ class DrawingApp:
 
         self.last_x, self.last_y = None, None
         self.pen_color = 'black'
-
+        # Создание метки для предварительного просмотра цвета
+        self.color_preview = tk.Label(root, bg=self.pen_color, width=20, height=2)
+        self.color_preview.pack()
         # Связываем событие правой кнопки мыши с методом pick_color
         self.canvas.bind('<Button-3>', self.pick_color)
 
@@ -180,16 +182,17 @@ class DrawingApp:
         self.image = Image.new("RGB", (600, 400), "white")
         self.draw = ImageDraw.Draw(self.image)
 
-    def choose_color(self, event):
+    def choose_color(self, event=None):
         '''
         Открывает стандартное диалоговое окно выбора цвета и устанавливает выбранный цвет как текущий для кисти.
         '''
-        # Выбор цвета
-        color = colorchooser.askcolor()[1]
+        color = colorchooser.askcolor()[1]  # Открывает диалог выбора цвета
         if color:
-            self.previous_color = self.pen_color  # Сохраняем предыдущий цвет
             self.pen_color = color
-
+            self.update_color_preview()  # Обновляет предварительный просмотр цвета
+    def update_color_preview(self):
+        """Обновляет цвет метки предварительного просмотра."""
+        self.color_preview.config(bg=self.pen_color)
     def save_image(self, event):
         '''
         Позволяет пользователю сохранить изображение, используя стандартное диалоговое окно для сохранения файла.
