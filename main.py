@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import colorchooser, filedialog, messagebox
+from tkinter import colorchooser, filedialog, messagebox, simpledialog
 from PIL import Image, ImageDraw, ImageTk
 
 
@@ -32,6 +32,7 @@ class DrawingApp:
         update_brush_size(size): Обновляет размер кисти на основе выбора пользователя.
         activate_eraser(self):   Активация инструмента "Ластик"
         deactivate_eraser(self):   Деактивация инструмента "Ластик" и восстановление предыдущего цвета
+        change_canvas_size(self): Обновляет размеры окна
     """
 
     def __init__(self, root):
@@ -72,7 +73,9 @@ class DrawingApp:
         # Привязка горячих клавиш
         self.root.bind('<Control-s>', self.save_image)
         self.root.bind('<Control-c>', self.choose_color)
-
+        # Кнопка для изменения размера холста
+        self.resize_button = tk.Button(root, text="Изменить размер холста", command=self.change_canvas_size)
+        self.resize_button.pack()
     def setup_ui(self):
         '''
         Этот метод отвечает за создание и расположение виджетов управления:
@@ -142,7 +145,7 @@ class DrawingApp:
 
     def paint(self, event):
         '''
-        Функция вызывается при движении мыши с нажатой левой кнопкой по холсту. Она рисует линии на холсте Tkinter и параллельно на объекте Image из Pillow:
+        Метод вызывается при движении мыши с нажатой левой кнопкой по холсту. Она рисует линии на холсте Tkinter и параллельно на объекте Image из Pillow:
         :param event: Событие содержит координаты мыши, которые используются для рисования.
         '''
         # Обработка рисования
@@ -167,6 +170,25 @@ class DrawingApp:
         self.last_x = event.x
         self.last_y = event.y
 
+    def change_canvas_size(self):
+        '''
+        Изменяем размеры холста
+        '''
+        # Запрашиваем новые размеры холста
+        new_width = simpledialog.askinteger("Ширина", "Введите новую ширину холста:", minvalue=100)
+        new_height = simpledialog.askinteger("Высота", "Введите новую высоту холста:", minvalue=100)
+
+        if new_width and new_height:
+            # Обновляем размеры холста
+            self.canvas_width = new_width
+            self.canvas_height = new_height
+
+            # Обновляем холст
+            self.canvas.config(width=self.canvas_width, height=self.canvas_height)
+
+            # Создаем новое изображение с новыми размерами
+            self.image = Image.new("RGB", (self.canvas_width, self.canvas_height), "white")
+            self.draw = ImageDraw.Draw(self.image)
     def reset(self, event):
         '''
         Сбрасывает последние координаты кисти. Это необходимо для корректного начала новой линии после того, как пользователь отпустил кнопку мыши и снова начал рисовать.
@@ -191,7 +213,9 @@ class DrawingApp:
             self.pen_color = color
             self.update_color_preview()  # Обновляет предварительный просмотр цвета
     def update_color_preview(self):
-        """Обновляет цвет метки предварительного просмотра."""
+        """
+        Обновляет цвет метки предварительного просмотра.
+        """
         self.color_preview.config(bg=self.pen_color)
     def save_image(self, event):
         '''
