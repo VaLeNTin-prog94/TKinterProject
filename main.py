@@ -76,6 +76,15 @@ class DrawingApp:
         # Кнопка для изменения размера холста
         self.resize_button = tk.Button(root, text="Изменить размер холста", command=self.change_canvas_size)
         self.resize_button.pack()
+        # Кнопка для изменения фона
+        self.bg_button = tk.Button(root, text="Изменить фон", command=self.change_background)
+        self.bg_button.pack(side=tk.LEFT)
+        # Кнопка для добавления текста
+        self.text_button = tk.Button(root, text="Текст", command=self.add_text)
+        self.text_button.pack(side=tk.LEFT)
+        self.canvas.bind("<Button-1>", self.click_canvas)
+        self.text_added = False  # Новый флаг для отслеживания добавления текста
+        self.current_text = None
     def setup_ui(self):
         '''
         Этот метод отвечает за создание и расположение виджетов управления:
@@ -108,6 +117,34 @@ class DrawingApp:
                                          command=self.deactivate_eraser)
         restore_color_button.pack(side=tk.LEFT)
 
+    def add_text(self):
+        text = simpledialog.askstring("Ввод текста", "Введите текст:")
+        if text:
+            self.current_text = text
+            # Привязываем событие клика только один раз
+            self.canvas.bind("<Button-1>", self.click_canvas)
+        else:
+            messagebox.showwarning("Внимание",
+                                   "Пожалуйста, введите какой-нибудь текст.")  # Опционально: предупреждение пользователю
+
+    def click_canvas(self, event):
+        if self.current_text:  # Проверяем, есть ли текст для добавления
+            x, y = event.x, event.y
+            self.draw.text((x, y), self.current_text, fill=self.pen_color)
+            self.update_canvas()
+            self.current_text = None  # Сбросим текст после добавления
+            self.canvas.unbind("<Button-1>")  # Убираем привязку к событию клика
+    def update_canvas(self):
+        self.tk_image = ImageTk.PhotoImage(self.image)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
+        self.canvas.image = self.tk_image
+    def change_background(self):
+        new_color = colorchooser.askcolor()[1]
+        if new_color:
+            self.canvas.config(background=new_color)
+            self.image = Image.new("RGB", (800, 600), new_color)
+            self.draw = ImageDraw.Draw(self.image)  # Обновляем объект рисования
+
     def update_brush_size(self, selected_size):
         '''
          # Обновление размера кисти
@@ -122,7 +159,10 @@ class DrawingApp:
         :param selected_size: Выбранный размер ластика из выпадающего меню.
         '''
         self.eraser_size = int(selected_size)  # Обновляем размер ластика, когда изменен выбор
-
+    def update_canvas(self):
+        self.tk_image = ImageTk.PhotoImage(self.image)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
+        self.canvas.image = self.tk_image  # Сохраняем ссылку на изображение
     def pick_color(self, event):
         '''
         Обрабатывает событие клика правой кнопкой мыши на холсте.
@@ -189,6 +229,7 @@ class DrawingApp:
             # Создаем новое изображение с новыми размерами
             self.image = Image.new("RGB", (self.canvas_width, self.canvas_height), "white")
             self.draw = ImageDraw.Draw(self.image)
+
     def reset(self, event):
         '''
         Сбрасывает последние координаты кисти. Это необходимо для корректного начала новой линии после того, как пользователь отпустил кнопку мыши и снова начал рисовать.
@@ -212,11 +253,13 @@ class DrawingApp:
         if color:
             self.pen_color = color
             self.update_color_preview()  # Обновляет предварительный просмотр цвета
+
     def update_color_preview(self):
         """
         Обновляет цвет метки предварительного просмотра.
         """
         self.color_preview.config(bg=self.pen_color)
+
     def save_image(self, event):
         '''
         Позволяет пользователю сохранить изображение, используя стандартное диалоговое окно для сохранения файла.
@@ -242,7 +285,11 @@ class DrawingApp:
         '''
         self.is_eraser_active = False
         self.canvas.config(cursor="dot")  # Сбрасываем курсор на стрелку
-
+    def click_canvas(self, event):
+        if hasattr(self, 'current_text'):
+            x, y = event.x, event.y
+            self.draw.text((x, y), self.current_text, fill=self.pen_color)
+            self.update_canvas()
 
 def main():
     root = tk.Tk()
